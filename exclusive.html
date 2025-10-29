@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infosphere - Wikipedia Search & News</title>
+    <!-- 1. Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Lucide icons -->
+    <script src="https://unpkg.com/lucide-element@latest/dist/lucide-element.js"></script>
+    <!-- 3. Markdown parser to convert AI text to HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.umd.min.js"></script>
+    <!-- 4. Three.js for 3D animated background -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        /* --- Custom Styles --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0a1e; /* Deep space background */
+            color: #e0e0e0;
+        }
+        
+        /* 3D Background Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        /* Make content scroll over the fixed background */
+        header, main, footer {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a4a8a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6a6a9a;
+        }
+
+        /* Animated gradient text */
+        .gradient-text {
+            background: linear-gradient(90deg, #8a4fff, #ff4f8a, #4fafff);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-flow 5s ease-in-out infinite;
+        }
+
+        @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Subtle glow/shadow effect */
+        .glow-shadow {
+            box-shadow: 0 0 15px rgba(74, 74, 138, 0.3), 0 0 5px rgba(138, 79, 255, 0.2);
+        }
+
+        /* Glass morphism effect for modals */
+        .glass-effect {
+            background: rgba(26, 26, 46, 0.8); /* Semi-transparent purple-blue */
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(74, 74, 138, 0.4);
+        }
+
+        /* Custom search input */
+        #search-input {
+            background: rgba(26, 26, 46, 0.7);
+            border: 1px solid #4a4a8a;
+            transition: all 0.3s ease;
+        }
+        #search-input:focus {
+            background: rgba(26, 26, 46, 0.9);
+            border-color: #8a4fff;
+            box-shadow: 0 0 15px rgba(138, 79, 255, 0.3);
+            outline: none;
+        }
+
+        /* Article card styling */
+        .article-card {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4e;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .article-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(74, 74, 138, 0.4);
+        }
+        
+        /* Modal styling */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Modal content animation */
+        .modal .modal-content {
+            transform: scale(0.9);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .modal.open .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        /* Styling for Wiki content */
+        .wiki-article-content h1,
+        .wiki-article-content h2,
+        .wiki-article-content h3 {
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #c0c0ff;
+        }
+        .wiki-article-content h1 { font-size: 1.75rem; border-bottom: 1px solid #4a4a8a; padding-bottom: 4px; }
+        .wiki-article-content h2 { font-size: 1.5rem; }
+        .wiki-article-content h3 { font-size: 1.25rem; }
+        .wiki-article-content p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+        .wiki-article-content ul,
+        .wiki-article-content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+            list-style-position: outside;
+        }
+        .wiki-article-content ul { list-style-type: disc; }
+        .wiki-article-content ol { list-style-type: decimal; }
+        .wiki-article-content li { margin-bottom: 0.5rem; }
+        .wiki-article-content a {
+            color: #8a4fff;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .wiki-article-content a:hover { color: #ff4f8a; }
+        .wiki-article-content a.internal-link {
+            cursor: pointer;
+        }
+        .wiki-article-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        /* Style for infoboxes */
+        .wiki-article-content .infobox {
+            float: right;
+            width: 300px;
+            background: #1a1a2e;
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        .wiki-article-content .infobox img {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        .wiki-article-content::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        /* Search result item styling */
+        .search-result-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #4a4a8a;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .search-result-item:hover {
+            background-color: #2a2a4e;
+        }
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        .search-result-item h4 {
+            font-weight: 600;
+            color: #c0c0ff;
+        }
+        .search-result-item p {
+            font-size: 0.9rem;
+            color: #a0a0c0;
+        }
+        
+        /* AI Chat Modal Styles */
+        .ai-response {
+            background: #1a1a2e;
+            border: 1px solid #4a4a8a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            max-height: 30vh;
+            overflow-y: auto;
+        }
+        .ai-response.error {
+            background: #4d1a1a;
+            border-color: #ff4f8a;
+            color: #ffc0c0;
+        }
+        .ai-response p {
+            margin-bottom: 0.5rem;
+        }
+        .ai-response h4 {
+            font-weight: 600;
+            color: #ff4f8a;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* NEW: Fade-in animation styles */
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-8">
+
+    <!-- NEW: 3D Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Header -->
+    <header class="container mx-auto max-w-6xl mb-8 md:mb-12">
+        <div class="flex justify-between items-center p-4">
+            <div class="flex items-center space-x-2">
+                <lucide-element name="book-open" class="w-8 h-8 text-indigo-400"></lucide-element>
+                <h1 class="text-2xl md:text-3xl font-bold gradient-text">Infosphere</h1>
+            </div>
+            <a href="https://www.mediawiki.org/wiki/API:Main_page" target="_blank" class="hidden md:flex items-center space-x-2 text-gray-400 hover:text-white transition-colors">
+                <lucide-element name="globe" class="w-5 h-5"></lucide-element>
+                <span>Powered by Wikipedia & AI</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto max-w-6xl">
+
+        <!-- Search Section -->
+        <section id="search-section" class="mb-12">
+            <div class="max-w-3xl mx-auto text-center">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Explore Any Topic</h2>
+                <p class="text-lg text-gray-400 mb-8">
+                    Search Wikipedia for facts, or ask our AI for detailed explanations.
+                </p>
+                
+                <!-- NEW SEARCH BAR -->
+                <div class="flex rounded-full glow-shadow">
+                    <input
+                        id="search-input"
+                        type="text"
+                        placeholder="What do you want to learn about?"
+                        class="w-full py-4 px-6 md:px-8 text-lg rounded-l-full focus:outline-none"
+                    >
+                    <button
+                        id="search-wiki-btn"
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-4 md:px-6 transition-colors flex items-center"
+                        title="Search Wikipedia for facts"
+                    >
+                        <lucide-element name="book-open" class="w-6 h-6"></lucide-element>
+                        <span class="hidden md:inline ml-2">Search Facts</span>
+                    </button>
+                    <button
+                        id="search-ai-btn"
+                        class="bg-pink-600 hover:bg-pink-500 text-white font-bold py-4 px-4 md:px-6 rounded-r-full transition-colors flex items-center"
+                        title="Ask AI for reasoning (why/how)"
+                    >
+                        <lucide-element name="brain-circuit" class="w-6 h-6"></lucide-element>
+                        <span class="hidden md:inline ml-2">Ask AI</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- News Feed Section -->
+        <section id="news-section" class="fade-in-section"> <!-- NEW: Added fade-in class -->
+            <h2 class="text-3xl font-bold mb-4">Latest Headlines</h2>
+            
+            <!-- News Filter Menu -->
+            <div id="news-filter-menu" class="flex flex-wrap gap-2 mb-6 border-b border-gray-700 pb-4">
+                <button class="news-filter-btn active bg-indigo-600 text-white" data-topic="breaking-news">Top Stories</button>
+                <button class="news-filter-btn" data-topic="technology">Technology</button>
+                <button class="news-filter-btn" data-topic="business">Business</button>
+                <button class="news-filter-btn" data-topic="sports">Sports</button>
+                <button class="news-filter-btn" data-topic="science">Science</button>
+                <button class="news-filter-btn" data-topic="entertainment">Entertainment</button>
+            </div>
+            
+            <!-- News Grid -->
+            <div id="news-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- News articles will be injected here by JavaScript -->
+                <!-- Loading Skeletons -->
+                <div class="article-card-skeleton animate-pulse"></div>
+                <div class="article-card-skeleton animate-pulse"></div>
+                <div class="article-card-skeleton animate-pulse hidden md:block"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-gray-500 mt-12 py-6 border-t border-gray-800">
+        <p>Infosphere &copy; 2025. Content provided by Wikipedia.</p>
+    </footer>
+
+    <!-- MODALS -->
+
+    <!-- 1. Search Results List Modal -->
+    <div id="search-results-modal" class="modal">
+        <div class="modal-content glass-effect w-full max-w-2xl h-[70vh] rounded-lg shadow-2xl flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                <h2 id="search-results-title" class="text-xl font-semibold text-white"></h2>
+                <button id="close-search-results" class="text-gray-400 hover:text-white">
+                    <lucide-element name="x" class="w-6 h-6"></lucide-element>
+                </button>
+            </div>
+            
+            <!-- Modal Body (Scrolling Content) -->
+            <div id="search-results-list" class="flex-1 overflow-y-auto">
+                <!-- Search results will be injected here -->
+                <div class="p-8 text-center" id="search-results-loader">
+                    <lucide-element name="loader-2" class="w-8 h-8 mx-auto animate-spin"></lucide-element>
+                    <p class="mt-2">Searching Wikipedia...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 2. Full Article Reader Modal -->
+    <div id="article-reader-modal" class="modal">
+        <div class="modal-content glass-effect w-full max-w-4xl h-[90vh] rounded-lg shadow-2xl flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                <h2 id="article-reader-title" class="text-xl font-semibold text-white truncate"></h2>
+                <div class="flex items-center gap-4">
+                    <!-- NEW Back Button -->
+                    <button id="article-back-btn" class="text-gray-400 hover:text-white hidden" title="Back">
+                        <lucide-element name="arrow-left" class="w-6 h-6"></lucide-element>
+                    </button>
+                    <button id="back-to-search" class="text-gray-400 hover:text-white" title="Back to results">
+                        <lucide-element name="list" class="w-6 h-6"></lucide-element>
+                    </button>
+                    <button id="close-article-reader" class="text-gray-400 hover:text-white" title="Close">
+                        <lucide-element name="x" class="w-6 h-6"></lucide-element>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Body (Scrolling Content) -->
+            <div id="article-reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto wiki-article-content">
+                <!-- Full article content will be injected here -->
+                <div id="article-loader" class="p-8 text-center">
+                    <lucide-element name="loader-2" class="w-12 h-12 mx-auto animate-spin"></lucide-element>
+                    <p class="mt-4 text-lg">Loading full article...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. AI Helper Modal (MODIFIED FOR LIVE CHAT) -->
+    <div id="ai-helper-modal" class="modal">
+        <div class="modal-content glass-effect w-full max-w-2xl rounded-lg shadow-2xl flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                    <lucide-element name="brain-circuit" class="w-6 h-6 text-pink-400"></lucide-element>
+                    Ask the AI (Gemini)
+                </h2>
+                <button id="close-ai-helper" class="text-gray-400 hover:text-white">
+                    <lucide-element name="x" class="w-6 h-6"></lucide-element>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6">
+                <p class="text-lg mb-4">Ask a complex "what/why/how" question.</p>
+                
+                <!-- AI Response Area -->
+                <div id="ai-response-area" class="ai-response hidden">
+                    <!-- AI response or error will be injected here -->
+                </div>
+
+                <!-- AI Loading Skeleton -->
+                <div id="ai-loader" class="p-4 text-center hidden">
+                    <lucide-element name="loader-2" class="w-8 h-8 mx-auto animate-spin text-pink-400"></lucide-element>
+                    <p class="mt-2 text-pink-200">AI is thinking...</p>
+                </div>
+                
+                <!-- Input Form -->
+                <form id="ai-query-form" class="mt-4">
+                    <textarea id="ai-query-input" rows="3" class="w-full p-3 rounded bg-gray-900 border border-gray-700 text-gray-100 focus:outline-none focus:border-pink-500" placeholder="e.g., 'Why is the sky blue?'"></textarea>
+                    <button id="submit-ai-query" type="submit" class="mt-4 w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <lucide-element name="send" class="w-5 h-5"></lucide-element>
+                        Submit Query to AI
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CSS for News Filter Buttons and Skeletons -->
+    <style>
+        .news-filter-btn {
+            padding: 8px 16px;
+            border-radius: 99px; /* pill shape */
+            font-weight: 500;
+            background-color: #2a2a4e;
+            color: #c0c0ff;
+            border: 1px solid #4a4a8a;
+            transition: all 0.2s ease;
+        }
+        .news-filter-btn:hover {
+            background-color: #4a4a8a;
+            color: white;
+        }
+        .news-filter-btn.active {
+            background-color: #8a4fff;
+            color: white;
+            border-color: #8a4fff;
+        }
+        
+        .article-card-skeleton {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4e;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .article-card-skeleton::before {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 150px;
+            background-color: #2a2a4e;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .article-card-skeleton::after {
+            content: '';
+            display: block;
+            height: 20px;
+            background-color: #2a2a4e;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            width: 80%;
+        }
+    </style>
+
+
+    <!-- JAVASCRIPT -->
+    <script type="module">
+        // --- 1. CONFIGURATION ---
+
+        // --- Gemini API Config ---
+        // THIS WILL BE BLOCKED BY THE BROWSER'S SECURITY POLICY (CSP)
+        // This is the cause of the PERMISSION_DENIED error.
+        const GEMINI_API_KEY = "AIzaSyAuLrMiP1cDuX97jNJdiuduuJLx4_ZGT18"; // Key has been added
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+        // --- GNews API Config ---
+        const GNEWS_API_KEY = "10273e52cf9fa3431183b9cd2bd53da8";
+        
+        // --- Wikipedia API Config ---
+        const WIKI_API_URL = "https://en.wikipedia.org/w/api.php";
+
+        // --- APP STATE ---
+        let wikiHistory = []; // For the new back button
+        
+        // --- Mock Data (Fallback for News) ---
+        const mockNewsData = {
+            "totalArticles": 4,
+            "articles": [
+                {
+                    "title": "Mock: The Future of Quantum Computing",
+                    "description": "Quantum computers promise to revolutionize... (This is mock data as GNews API is blocked)",
+                    "content": "...",
+                    "url": "https://en.wikipedia.org/wiki/Quantum_computing",
+                    "image": "https://placehold.co/600x400/2a2a4e/8a4fff?text=Quantum",
+                    "publishedAt": "2025-10-28T10:00:00Z",
+                    "source": { "name": "Mock Data Service", "url": "https://google.com/news" }
+                },
+                {
+                    "title": "Mock: Breakthrough in AI-Powered Drug Discovery",
+                    "description": "New AI models are accelerating the discovery of novel treatments...",
+                    "content": "...",
+                    "url": "https://en.wikipedia.org/wiki/Artificial_intelligence",
+                    "image": "https://placehold.co/600x400/2a2a4e/ff4f8a?text=AI+Discovery",
+                    "publishedAt": "2025-10-28T09:00:00Z",
+                    "source": { "name": "Mock Data Service", "url": "https://google.com/news" }
+                },
+                {
+                    "title": "Mock: Mars Colony Simulators Go Online",
+                    "description": "Simulations are preparing for the next giant leap in space exploration...",
+                    "content": "...",
+                    "url": "https://en.wikipedia.org/wiki/Mars",
+                    "image": "https://placehold.co/600x400/2a2a4e/4fafff?text=Mars+Sim",
+                    "publishedAt": "2025-10-28T08:00:00Z",
+                    "source": { "name": "Mock Data Service", "url": "https://google.com/news" }
+                },
+                {
+                    "title": "Mock: Deep Sea Vents Reveal New Life",
+                    "description": "Scientists are stunned by the biodiversity found...",
+                    "content": "...",
+                    "url": "https://en.wikipedia.org/wiki/Hydrothermal_vent",
+                    "image": "https://placehold.co/600x400/2a2a4e/4fff8a?text=Deep+Sea",
+                    "publishedAt": "2025-10-28T07:00:00Z",
+                    "source": { "name": "Mock Data Service", "url": "https://google.com/news" }
+                }
+            ]
+        };
+
+        // --- 2. DOM SELECTORS ---
+        const searchInput = document.getElementById('search-input');
+        const searchWikiBtn = document.getElementById('search-wiki-btn');
+        const searchAiBtn = document.getElementById('search-ai-btn');
+        const newsFeed = document.getElementById('news-feed');
+        const newsFilterMenu = document.getElementById('news-filter-menu');
+        
+        // Search Results Modal Selectors
+        const searchModal = document.getElementById('search-results-modal');
+        const searchModalTitle = document.getElementById('search-results-title');
+        const searchResultsList = document.getElementById('search-results-list');
+        const searchResultsLoader = document.getElementById('search-results-loader');
+        const closeSearchModalBtn = document.getElementById('close-search-results');
+        
+        // Article Reader Modal Selectors
+        const articleModal = document.getElementById('article-reader-modal');
+        const articleModalTitle = document.getElementById('article-reader-title');
+        const articleModalContent = document.getElementById('article-reader-content');
+        const articleLoader = document.getElementById('article-loader');
+        const articleBackBtn = document.getElementById('article-back-btn'); // NEW Back button
+        const backToSearchBtn = document.getElementById('back-to-search');
+        const closeArticleModalBtn = document.getElementById('close-article-reader');
+
+        // AI Helper Modal Selectors
+        const aiHelperModal = document.getElementById('ai-helper-modal');
+        const closeAiHelperBtn = document.getElementById('close-ai-helper');
+        const aiQueryForm = document.getElementById('ai-query-form');
+        const aiQueryInput = document.getElementById('ai-query-input');
+        const aiResponseArea = document.getElementById('ai-response-area');
+        const aiLoader = document.getElementById('ai-loader');
+
+        // --- 3. WIKIPEDIA API FUNCTIONS ---
+        
+        async function fetchWikipediaSearch(query) {
+            const params = new URLSearchParams({
+                action: "opensearch",
+                search: query,
+                limit: "10",
+                namespace: "0",
+                format: "json",
+                origin: "*"
+            });
+            try {
+                const response = await fetch(`${WIKI_API_URL}?${params}`);
+                if (!response.ok) throw new Error("Network response was not ok.");
+                const data = await response.json();
+                renderSearchResults(data[1], data[2], data[3]);
+            } catch (error) {
+                console.error("Error fetching Wikipedia search:", error);
+                searchResultsList.innerHTML = `<p class="p-4 text-red-400">Error: Could not fetch search results.</p>`;
+            }
+        }
+
+        /**
+         * Fetches and displays a Wikipedia article.
+         * @param {string} pageTitle - The title of the Wikipedia page.
+         * @param {boolean} [isBack=false] - True if this is a "back" navigation.
+         */
+        async function fetchWikipediaArticle(pageTitle, isBack = false) {
+            if (!isBack) {
+                wikiHistory.push(pageTitle);
+            }
+            updateArticleNavButtons();
+
+            toggleSearchModal(false);
+            toggleArticleModal(true);
+            articleLoader.style.display = 'block';
+            articleModalContent.innerHTML = '';
+            articleModalContent.appendChild(articleLoader);
+            articleModalTitle.textContent = pageTitle;
+            articleModalContent.scrollTop = 0; // Scroll to top
+
+            const params = new URLSearchParams({
+                action: "parse",
+                page: pageTitle,
+                format: "json",
+                prop: "text|images",
+                disabletoc: "true",
+                origin: "*"
+            });
+            try {
+                const response = await fetch(`${WIKI_API_URL}?${params}`);
+                if (!response.ok) throw new Error("Network response was not ok.");
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.info);
+                renderFullArticle(data.parse.text["*"], pageTitle);
+            } catch (error) {
+                console.error("Error fetching Wikipedia article:", error);
+                articleModalContent.innerHTML = `<p class="p-4 text-red-400">Error: Could not load article. ${error.message}</p>`;
+            }
+        }
+
+        function renderSearchResults(titles, descriptions, urls) {
+            searchResultsLoader.style.display = 'none';
+            searchResultsList.innerHTML = "";
+            if (titles.length === 0) {
+                searchResultsList.innerHTML = `<p class="p-4 text-center">No results found.</p>`;
+                return;
+            }
+            titles.forEach((title, index) => {
+                const item = document.createElement('a');
+                item.className = "search-result-item";
+                item.innerHTML = `<h4>${title}</h4><p>${descriptions[index]}</p>`;
+                // When clicking from search, reset history
+                item.addEventListener('click', () => {
+                    wikiHistory = []; // Reset history for a new search
+                    fetchWikipediaArticle(title, false);
+                });
+                searchResultsList.appendChild(item);
+            });
+        }
+
+        function renderFullArticle(html, pageTitle) {
+            articleLoader.style.display = 'none';
+            articleModalContent.innerHTML = html;
+            const content = articleModalContent;
+            // Clean up unwanted Wikipedia elements
+            content.querySelectorAll('.mw-editsection, .reflist, .reference, .references, .mbox-small, .noprint, .mw-selflink-نوان, table.navbox').forEach(el => el.remove());
+            
+            // Handle links
+            content.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href');
+                if (href) {
+                    if (href.startsWith('/wiki/')) {
+                        // This is an internal Wikipedia link
+                        a.setAttribute('href', `https://en.wikipedia.org${href}`); // Set real href for new tab
+                        a.setAttribute('target', '_blank'); // Open in new tab by default
+                        
+                        // Check if it's a valid article link (not a file, category, etc.)
+                        if (!href.includes(':')) {
+                            a.classList.add('internal-link');
+                            a.dataset.pageTitle = decodeURIComponent(href.replace('/wiki/', ''));
+                            a.addEventListener('click', handleInternalLinkClick); // Add our custom click handler
+                        }
+                    } else if (href.startsWith('#')) {
+                        // Internal anchor link, let it be
+                    } else {
+                        // External link
+                        a.setAttribute('target', '_blank');
+                        a.setAttribute('rel', 'noopener noreferrer');
+                    }
+                }
+            });
+
+            // Fix image source URLs
+            content.querySelectorAll('img').forEach(img => {
+                const src = img.getAttribute('src');
+                if (src) {
+                    if (src.startsWith('//')) {
+                        img.src = `https:${src}`; // Fix protocol-relative URLs
+                    } else if (src.startsWith('/')) {
+                        img.src = `https://en.wikipedia.org${src}`; // Fix root-relative URLs
+                    }
+                }
+            });
+        }
+
+        function handleInternalLinkClick(e) {
+            e.preventDefault(); // Stop it from opening a new tab
+            const pageTitle = e.currentTarget.dataset.pageTitle;
+            if (pageTitle) {
+                articleModalContent.scrollTop = 0;
+                fetchWikipediaArticle(pageTitle, false); // Add to history
+            }
+        }
+        
+        // NEW function to handle back button click
+        function handleArticleBack() {
+            if (wikiHistory.length > 1) {
+                wikiHistory.pop(); // Remove the current page
+                const previousPage = wikiHistory[wikiHistory.length - 1]; // Get the new last page
+                articleModalContent.scrollTop = 0;
+                fetchWikipediaArticle(previousPage, true); // Fetch it as a "back" navigation
+            }
+        }
+        
+        // NEW function to show/hide back button
+        function updateArticleNavButtons() {
+            if (wikiHistory.length > 1) {
+                articleBackBtn.style.display = 'block';
+            } else {
+                articleBackBtn.style.display = 'none';
+            }
+        }
+
+        // --- 4. NEWS FEED FUNCTIONS ---
+
+        async function loadNewsFeed(topic = "breaking-news") {
+            newsFeed.innerHTML = `
+                <div class="article-card-skeleton animate-pulse"></div>
+                <div class="article-card-skeleton animate-pulse"></div>
+                <div class="article-card-skeleton animate-pulse hidden md:block"></div>
+            `;
+            const url = `https://gnews.io/api/v4/top-headlines?category=general&topic=${topic}&lang=en&max=6&apikey=${GNEWS_API_KEY}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`GNews API error: ${response.status}`);
+                const data = await response.json();
+                renderNewsFeed(data.articles);
+            } catch (error) {
+                console.warn(`Live News Feed Failed: ${error.message}. This is expected in some environments. Displaying mock data.`);
+                renderNewsFeed(mockNewsData.articles);
+            }
+        }
+
+        function renderNewsFeed(articles) {
+            newsFeed.innerHTML = "";
+            if (!articles || articles.length === 0) {
+                newsFeed.innerHTML = "<p>No articles found for this topic.</p>";
+                return;
+            }
+            articles.forEach(article => {
+                const card = document.createElement('article');
+                // FIX: Removed 'fade-in-section' from here to prevent vanishing
+                card.className = "article-card rounded-lg overflow-hidden shadow-lg p-4"; 
+                
+                // This is the updated "Image Not Available" logic
+                const imageUrl = article.image || `https://placehold.co/600x400/2a2a4e/c0c0ff?text=Image+Not+Available`;
+                
+                card.innerHTML = `
+                    <a href="${article.url}" target="_blank" rel="noopener noreferrer">
+                        <img src="${imageUrl}" alt="${article.title}" class="w-full h-48 object-cover rounded-md mb-4" onerror="this.src='https://placehold.co/600x400/2a2a4e/c0c0ff?text=Image+Not+Available'">
+                        <h3 class="text-xl font-bold mb-2 text-white hover:text-indigo-400 transition-colors">${article.title}</h3>
+                    </a>
+                    <p class="text-gray-400 text-sm mb-3">${article.description}</p>
+                    <div class="text-xs text-gray-500">
+                        <span>${article.source.name}</span> |
+                        <span>${new Date(article.publishedAt).toLocaleDateString()}</span>
+                    </div>
+                `;
+                newsFeed.appendChild(card);
+            });
+        }
+        
+        // --- 5. AI CHAT FUNCTIONS (NEW) ---
+
+        /**
+         * Handles the "Ask AI" form submission.
+         * This will attempt to call the Gemini API and will likely fail.
+         * @param {Event} e - The form submission event.
+         */
+        async function handleAiSubmit(e) {
+            e.preventDefault();
+            const query = aiQueryInput.value.trim();
+            if (!query) return;
+
+            aiLoader.style.display = 'block';
+            aiResponseArea.style.display = 'none';
+            aiResponseArea.innerHTML = '';
+
+            try {
+                // --- THIS IS THE CALL THAT WILL BE BLOCKED ---
+                const response = await fetch(GEMINI_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: query }] }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    // This will catch the PERMISSION_DENIED error
+                    throw new Error(errorData.error.message || `API Error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const text = result.candidates[0].content.parts[0].text;
+                
+                // If it somehow succeeds, render the text
+                aiLoader.style.display = 'none';
+                aiResponseArea.classList.remove('error');
+                aiResponseArea.innerHTML = marked.parse(text); // Using markdown parser
+                aiResponseArea.style.display = 'block';
+
+            } catch (error) {
+                console.error("AI API Call Failed:", error);
+                aiLoader.style.display = 'none';
+                
+                // --- THIS IS THE IMPORTANT PART ---
+                // Display a user-facing error explaining the unfixable problem.
+                aiResponseArea.classList.add('error');
+                aiResponseArea.innerHTML = `
+                    <h4>API Request Blocked</h4>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>As we've seen, the request to the AI model was blocked by the browser's security policy. This is a security restriction in this environment that we cannot fix.</p>
+                    <p>Please use the <strong>"Search Facts"</strong> button for Wikipedia, or ask me (Gemini) in the chat on the left!</p>
+                `;
+                aiResponseArea.style.display = 'block';
+            }
+        }
+        
+        // --- 6. MODAL & EVENT HANDLERS ---
+
+        function toggleSearchModal(show) {
+            if (show) searchModal.classList.add('open');
+            else searchModal.classList.remove('open');
+        }
+        
+        function toggleArticleModal(show) {
+            if (show) articleModal.classList.add('open');
+            else articleModal.classList.remove('open');
+        }
+
+        function toggleAiHelperModal(show) {
+            if (show) aiHelperModal.classList.add('open');
+            else aiHelperModal.classList.remove('open');
+        }
+
+        function handleWikiSearch(e) {
+            e.preventDefault(); 
+            const query = searchInput.value.trim();
+            if (!query) return;
+            toggleSearchModal(true);
+            searchModalTitle.textContent = `Wikipedia Results: ${query}`;
+            searchResultsList.innerHTML = '';
+            searchResultsList.appendChild(searchResultsLoader);
+            searchResultsLoader.style.display = 'block';
+            fetchWikipediaSearch(query);
+        }
+
+        function handleAiSearch(e) {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            aiQueryInput.value = query; // Set the text in the new modal
+            aiResponseArea.innerHTML = ''; // Clear old responses
+            aiResponseArea.style.display = 'none';
+            aiLoader.style.display = 'none';
+            toggleAiHelperModal(true);
+        }
+        
+        function handleNewsFilterClick(e) {
+            if (e.target.classList.contains('news-filter-btn')) {
+                document.querySelectorAll('.news-filter-btn').forEach(btn => {
+                    btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+                });
+                e.target.classList.add('active', 'bg-indigo-600', 'text-white');
+                const topic = e.target.dataset.topic;
+                loadNewsFeed(topic);
+            }
+        }
+
+        // --- 7. THREE.JS BACKGROUND ---
+        
+        let scene, camera, renderer, stars;
+
+        function init3DBackground() {
+            // FIX: Check if THREE is loaded
+            if (typeof THREE === 'undefined') {
+                console.error("Three.js library is not loaded.");
+                return;
+            }
+            const canvas = document.getElementById('bg-canvas');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.z = 5;
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0); // Transparent background
+
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = (Math.random() - 0.5) * 200;
+                const y = (Math.random() - 0.5) * 200;
+                const z = (Math.random() - 0.5) * 200;
+                starVertices.push(x, y, z);
+            }
+
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+
+            window.addEventListener('resize', onWindowResize, false);
+            document.addEventListener('mousemove', onMouseMove, false);
+            animate3DBackground();
+        }
+
+        function animate3DBackground() {
+            if (!renderer || !scene || !camera || !stars) return; // Add check
+            requestAnimationFrame(animate3DBackground);
+            stars.rotation.x += 0.0001;
+            stars.rotation.y += 0.0002;
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            if (!renderer || !camera) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function onMouseMove(event) {
+            if (!camera || !scene) return;
+            // Move camera slightly based on mouse
+            const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+            camera.position.x = mouseX * 0.5;
+            camera.position.y = mouseY * 0.5;
+            camera.lookAt(scene.position);
+        }
+        
+        // --- 8. SCROLL ANIMATION ---
+        
+        function initScrollAnimations() {
+            const sections = document.querySelectorAll('.fade-in-section');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 }); // Trigger when 10% of the element is visible
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        }
+        
+        // --- 9. INITIALIZATION ---
+
+        // FIX: Wrap initialization in DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add event listeners
+            searchWikiBtn.addEventListener('click', handleWikiSearch);
+            searchAiBtn.addEventListener('click', handleAiSearch);
+            newsFilterMenu.addEventListener('click', handleNewsFilterClick);
+            aiQueryForm.addEventListener('submit', handleAiSubmit); // NEW listener for the live chat
+
+            // Modal Listeners
+            closeSearchModalBtn.addEventListener('click', () => toggleSearchModal(false));
+            searchModal.addEventListener('click', (e) => {
+                if (e.target === searchModal) toggleSearchModal(false);
+            });
+
+            closeArticleModalBtn.addEventListener('click', () => toggleArticleModal(false));
+            articleModal.addEventListener('click', (e) => {
+                if (e.target === articleModal) toggleArticleModal(false);
+            });
+            backToSearchBtn.addEventListener('click', () => {
+                toggleArticleModal(false);
+                toggleSearchModal(true);
+            });
+            articleBackBtn.addEventListener('click', handleArticleBack); // NEW listener for back button
+
+            closeAiHelperBtn.addEventListener('click', () => toggleAiHelperModal(false));
+            aiHelperModal.addEventListener('click', (e) => {
+                if (e.target === aiHelperModal) toggleAiHelperModal(false);
+            });
+
+            // Close modals on 'Escape' key
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    toggleArticleModal(false);
+                    toggleSearchModal(false);
+                    toggleAiHelperModal(false);
+                }
+            });
+            
+            // Initial load
+            loadNewsFeed();
+            init3DBackground();
+            initScrollAnimations();
+        });
+
+    </script>
+
+</body>
+</html>
+
