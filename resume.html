@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K Profile</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CSS for Decoration and Structure */
+        body { 
+            font-family: sans-serif; 
+            /* Decorative gradient background */
+            background: linear-gradient(135deg, #e0f2f1, #b3e5fc); 
+        }
+        
+        .card {
+            transition: all 0.2s ease-in-out; 
+            /* Enhanced initial shadow */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); 
+        }
+        .card:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2); /* Lift and stronger shadow on hover */
+        }
+
+        /* Decorative text styling for the main name */
+        h1 {
+            color: #0d47a1; /* Deep blue color */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); /* Subtle text shadow */
+        }
+
+        /* Add a decorative border to specialization block */
+        #specBlock {
+             border: 1px solid #90caf9;
+        }
+    </style>
+</head>
+<body class="flex justify-center items-center h-screen p-4">
+
+    <!-- Profile Card (Added 'card' class for custom CSS targeting) -->
+    <div class="card bg-white p-6 rounded-lg shadow-lg w-full max-w-sm text-sm">
+
+        <h1 class="text-xl font-bold text-center mb-4">Krishna Chandawar</h1>
+        
+        <div class="space-y-3">
+            
+            <p class="p-2 bg-gray-100 rounded">
+                <span class="font-semibold text-gray-600">Degree:</span> BCA Hons
+            </p>
+            
+            <p class="p-2 bg-gray-100 rounded">
+                <span class="font-semibold text-gray-600">Place:</span> RV University
+            </p>
+            
+            <!-- NEW BLOCK: Languages/Skills Known -->
+            <p class="p-2 bg-gray-100 rounded">
+                <span class="font-semibold text-gray-600">Skills:</span> HTML, CSS, JS, Python, SQL, Node
+            </p>
+
+            <!-- Interactive Specialization Block - UPDATED CONTENT -->
+            <p id="specBlock" class="p-2 bg-blue-100 rounded cursor-pointer hover:bg-blue-200 transition" onclick="c()">
+                <span class="font-semibold text-blue-700">Specialization (Click):</span> 
+                <!-- Updated specialization text -->
+                <span id="s">Web Dev, UI Design, Data Science, & Machine Learning</span>
+            </p>
+            
+        </div>
+    </div>
+
+    <!-- Minimal JavaScript -->
+    <script>
+        function c() {
+            const t = document.getElementById('s').textContent;
+            const i = document.createElement('input');
+            i.value = t;
+            document.body.appendChild(i);
+            i.select();
+            document.execCommand('copy'); 
+            document.body.removeChild(i);
+        }
+    </script>
+
+</body>
+</html>
