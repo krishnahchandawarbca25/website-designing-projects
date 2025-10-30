@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K Profile</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f4f8; }
+    </style>
+</head>
+<body class="flex justify-center items-center h-screen p-4">
+
+    <!-- Profile Card -->
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm text-sm">
+
+        <h1 class="text-xl font-bold text-center mb-4">Krishna Chandawar</h1>
+        
+        <div class="space-y-3">
+            
+            <p class="p-2 bg-gray-100 rounded">
+                <span class="font-semibold text-gray-600">Degree:</span> BCA Hons
+            </p>
+            
+            <p class="p-2 bg-gray-100 rounded">
+                <span class="font-semibold text-gray-600">Place:</span> RV University
+            </p>
+
+            <!-- Interactive Specialization Block -->
+            <p id="specBlock" class="p-2 bg-blue-100 rounded cursor-pointer hover:bg-blue-200 transition" onclick="c()">
+                <span class="font-semibold text-blue-700">Specialization (Click):</span> 
+                <span id="s">Web Dev & UI Design</span>
+            </p>
+            
+        </div>
+    </div>
+
+    <!-- Minimal JavaScript (Using short function/variable names) -->
+    <script>
+        function c() {
+            const t = document.getElementById('s').textContent;
+            const i = document.createElement('input');
+            i.value = t;
+            document.body.appendChild(i);
+            i.select();
+            document.execCommand('copy'); 
+            document.body.removeChild(i);
+        }
+    </script>
+
+</body>
+</html>
